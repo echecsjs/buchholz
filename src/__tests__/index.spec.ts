@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  averageOpponentsBuchholz,
+  buchholz,
+  buchholzCut1,
+  buchholzCut2,
+  buchholzMedian1,
+  buchholzMedian2,
+  foreBuchholz,
+} from '../index.js';
+
+import type { Game } from '../types.js';
+
+// 4 players, 3 rounds:
+// Round 1: A(W) 1-0 B, C(W) 0-1 D
+// Round 2: A(W) 0.5-0.5 D, C(W) 0-1 B
+// Round 3: A(W) 1-0 C, D(W) 1-0 B
+// Scores: A=2.5, D=2.5, B=1, C=0
+
+const GAMES: Game[] = [
+  { blackId: 'B', result: 1, round: 1, whiteId: 'A' },
+  { blackId: 'D', result: 0, round: 1, whiteId: 'C' },
+  { blackId: 'D', result: 0.5, round: 2, whiteId: 'A' },
+  { blackId: 'B', result: 0, round: 2, whiteId: 'C' },
+  { blackId: 'C', result: 1, round: 3, whiteId: 'A' },
+  { blackId: 'B', result: 1, round: 3, whiteId: 'D' },
+];
+
+describe('buchholz', () => {
+  it("returns sum of all opponents' scores", () => {
+    // A played B(1), D(2.5), C(0) → 3.5
+    expect(buchholz('A', GAMES)).toBe(3.5);
+  });
+
+  it('handles player with no games', () => {
+    expect(buchholz('A', [])).toBe(0);
+  });
+});
+
+describe('buchholzCut1', () => {
+  it('returns Buchholz minus the lowest opponent score', () => {
+    // A: opponents [0, 1, 2.5] → cut lowest → 3.5
+    expect(buchholzCut1('A', GAMES)).toBe(3.5);
+  });
+
+  it('returns 0 when only one opponent', () => {
+    const games: Game[] = [{ blackId: 'B', result: 1, round: 1, whiteId: 'A' }];
+    expect(buchholzCut1('A', games)).toBe(0);
+  });
+});
+
+describe('buchholzCut2', () => {
+  it('returns Buchholz minus the two lowest opponent scores', () => {
+    // A: opponents [0, 1, 2.5] → cut two lowest → 2.5
+    expect(buchholzCut2('A', GAMES)).toBe(2.5);
+  });
+});
+
+describe('buchholzMedian1', () => {
+  it('returns Buchholz minus lowest and highest', () => {
+    // A: opponents [0, 1, 2.5] → remove 0 and 2.5 → 1
+    expect(buchholzMedian1('A', GAMES)).toBe(1);
+  });
+});
+
+describe('buchholzMedian2', () => {
+  it('returns Buchholz minus two lowest and two highest', () => {
+    // 3 opponents, removing 4 values leaves nothing → 0
+    expect(buchholzMedian2('A', GAMES)).toBe(0);
+  });
+});
+
+describe('averageOpponentsBuchholz', () => {
+  it("returns average of opponents' Buchholz scores", () => {
+    // B played A, C, D.
+    // buchholz(A) = 1 + 2.5 + 0 = 3.5
+    // buchholz(C) = 2.5 + 1 + 2.5 = 6
+    // buchholz(D) = 0 + 2.5 + 1 = 3.5
+    // AOB(B) = (3.5 + 6 + 3.5) / 3 = 13/3
+    const result = averageOpponentsBuchholz('B', GAMES);
+    expect(result).toBeCloseTo(13 / 3);
+  });
+});
+
+describe('foreBuchholz', () => {
+  it('calculates Buchholz as if final round games were draws', () => {
+    // Final round (3): A vs C, D vs B → treat as draws
+    // Adjusted scores:
+    //   A: 1 + 0.5 + 0.5 = 2
+    //   B: 0 + 1 + 0.5 = 1.5
+    //   C: 1 + 0 + 0.5 = 1.5
+    //   D: 0 + 0.5 + 0.5 = 1
+    // foreBuchholz(A) = B_adj(1.5) + D_adj(1) + C_adj(1.5) = 4
+    expect(foreBuchholz('A', GAMES)).toBe(4);
+  });
+});
