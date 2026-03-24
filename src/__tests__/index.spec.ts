@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  averageOpponentsBuchholz,
-  buchholz,
-  buchholzCut1,
-  buchholzCut2,
-  buchholzMedian1,
-  buchholzMedian2,
-  foreBuchholz,
-} from '../functions.js';
+import { averageOpponentsBuchholz } from '../average-opponents-buchholz.js';
+import { buchholzCut1 } from '../buchholz-cut1.js';
+import { buchholzCut2 } from '../buchholz-cut2.js';
+import { buchholzMedian1 } from '../buchholz-median1.js';
+import { buchholzMedian2 } from '../buchholz-median2.js';
+import { buchholz } from '../buchholz.js';
+import { foreBuchholz } from '../fore-buchholz.js';
 
 import type { Game, GameKind } from '../types.js';
 

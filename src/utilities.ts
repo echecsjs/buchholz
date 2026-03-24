@@ -2,6 +2,11 @@ import type { Game, GameKind } from './types.js';
 
 const BYE_SENTINEL = '';
 
+interface Contribution {
+  isVUR: boolean;
+  value: number;
+}
+
 const VUR_KINDS = new Set<GameKind>(['forfeit-loss', 'half-bye', 'zero-bye']);
 
 /**
@@ -115,9 +120,76 @@ function dummyScore(player: string, games: Game[][], game: Game): number {
   return Math.min(playerOwnScore, games.length * 0.5);
 }
 
+/**
+ * Collect Buchholz contributions for a player per FIDE 16.
+ */
+function contributions(player: string, games: Game[][]): Contribution[] {
+  const result: Contribution[] = [];
+
+  for (const round of games) {
+    for (const g of round) {
+      if (g.white !== player && g.black !== player) {
+        continue;
+      }
+
+      const pKind = playerGameKind(player, g);
+
+      if (isUnplayed(pKind)) {
+        // FIDE 16.4: participant's own unplayed round → dummy opponent
+        result.push({
+          isVUR: isVUR(pKind),
+          value: dummyScore(player, games, g),
+        });
+      } else if (g.black !== BYE_SENTINEL && g.white !== BYE_SENTINEL) {
+        // OTB game → opponent's adjusted score (FIDE 16.3)
+        const opponent = g.white === player ? g.black : g.white;
+        result.push({
+          isVUR: false,
+          value: adjustedScore(opponent, games),
+        });
+      }
+      // Byes without kind (legacy sentinel byes) are skipped — same as before
+    }
+  }
+
+  return result;
+}
+
+/**
+ * FIDE 16.5 Cut-1 Exception: When cutting the least significant value
+ * for a participant with VURs, cut the lowest VUR contribution first,
+ * as long as it's not lower than the least significant value.
+ *
+ * Implementation: sort all contributions ascending. For each cut needed,
+ * if there's a VUR contribution, cut it (it's always >= the minimum
+ * since we're iterating from lowest). Otherwise cut the overall lowest.
+ */
+function applyCuts(items: Contribution[], count: number): Contribution[] {
+  if (count <= 0 || items.length === 0) {
+    return [...items];
+  }
+
+  const sorted = [...items].toSorted((a, b) => a.value - b.value);
+  const result = [...sorted];
+
+  for (let index = 0; index < count && result.length > 0; index++) {
+    // FIDE 16.5: prefer cutting VUR contributions
+    const vurIndex = result.findIndex((c) => c.isVUR);
+    if (vurIndex === -1) {
+      result.shift();
+    } else {
+      result.splice(vurIndex, 1);
+    }
+  }
+
+  return result;
+}
+
 export {
   BYE_SENTINEL,
   adjustedScore,
+  applyCuts,
+  contributions,
   dummyScore,
   gamesForPlayer,
   isUnplayed,
@@ -126,3 +198,5 @@ export {
   playerGameKind,
   score,
 };
+
+export type { Contribution };
