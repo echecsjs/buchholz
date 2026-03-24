@@ -4,7 +4,7 @@ import {
   dummyScore,
   isUnplayed,
   isVUR,
-  opponentIds,
+  opponents,
   playerGameKind,
   score,
 } from './utilities.js';
@@ -19,29 +19,29 @@ interface Contribution {
 /**
  * Collect Buchholz contributions for a player per FIDE 16.
  */
-function contributions(playerId: string, games: Game[][]): Contribution[] {
+function contributions(player: string, games: Game[][]): Contribution[] {
   const result: Contribution[] = [];
 
   for (const round of games) {
     for (const g of round) {
-      if (g.white !== playerId && g.black !== playerId) {
+      if (g.white !== player && g.black !== player) {
         continue;
       }
 
-      const pKind = playerGameKind(playerId, g);
+      const pKind = playerGameKind(player, g);
 
       if (isUnplayed(pKind)) {
         // FIDE 16.4: participant's own unplayed round → dummy opponent
         result.push({
           isVUR: isVUR(pKind),
-          value: dummyScore(playerId, games, g),
+          value: dummyScore(player, games, g),
         });
       } else if (g.black !== BYE_SENTINEL && g.white !== BYE_SENTINEL) {
         // OTB game → opponent's adjusted score (FIDE 16.3)
-        const opponentId = g.white === playerId ? g.black : g.white;
+        const opponent = g.white === player ? g.black : g.white;
         result.push({
           isVUR: false,
-          value: adjustedScore(opponentId, games),
+          value: adjustedScore(opponent, games),
         });
       }
       // Byes without kind (legacy sentinel byes) are skipped — same as before
@@ -51,8 +51,8 @@ function contributions(playerId: string, games: Game[][]): Contribution[] {
   return result;
 }
 
-function buchholz(playerId: string, games: Game[][]): number {
-  return contributions(playerId, games).reduce((sum, c) => sum + c.value, 0);
+function buchholz(player: string, games: Game[][]): number {
+  return contributions(player, games).reduce((sum, c) => sum + c.value, 0);
 }
 
 /**
@@ -85,48 +85,48 @@ function applyCuts(items: Contribution[], count: number): Contribution[] {
   return result;
 }
 
-function buchholzCut1(playerId: string, games: Game[][]): number {
-  return applyCuts(contributions(playerId, games), 1).reduce(
+function buchholzCut1(player: string, games: Game[][]): number {
+  return applyCuts(contributions(player, games), 1).reduce(
     (sum, c) => sum + c.value,
     0,
   );
 }
 
-function buchholzCut2(playerId: string, games: Game[][]): number {
-  return applyCuts(contributions(playerId, games), 2).reduce(
+function buchholzCut2(player: string, games: Game[][]): number {
+  return applyCuts(contributions(player, games), 2).reduce(
     (sum, c) => sum + c.value,
     0,
   );
 }
 
-function buchholzMedian1(playerId: string, games: Game[][]): number {
-  const items = contributions(playerId, games);
+function buchholzMedian1(player: string, games: Game[][]): number {
+  const items = contributions(player, games);
   const afterCutLow = applyCuts(items, 1);
   // Cut highest (no VUR exception for high cuts)
   const sorted = [...afterCutLow].toSorted((a, b) => b.value - a.value);
   return sorted.slice(1).reduce((sum, c) => sum + c.value, 0);
 }
 
-function buchholzMedian2(playerId: string, games: Game[][]): number {
-  const items = contributions(playerId, games);
+function buchholzMedian2(player: string, games: Game[][]): number {
+  const items = contributions(player, games);
   const afterCutLow = applyCuts(items, 2);
   const sorted = [...afterCutLow].toSorted((a, b) => b.value - a.value);
   return sorted.slice(2).reduce((sum, c) => sum + c.value, 0);
 }
 
-function averageOpponentsBuchholz(playerId: string, games: Game[][]): number {
-  const opponents = opponentIds(playerId, games);
-  if (opponents.length === 0) {
+function averageOpponentsBuchholz(player: string, games: Game[][]): number {
+  const opps = opponents(player, games);
+  if (opps.length === 0) {
     return 0;
   }
   let sum = 0;
-  for (const id of opponents) {
+  for (const id of opps) {
     sum += buchholz(id, games);
   }
-  return sum / opponents.length;
+  return sum / opps.length;
 }
 
-function foreBuchholz(playerId: string, games: Game[][]): number {
+function foreBuchholz(player: string, games: Game[][]): number {
   const lastIndex = games.length - 1;
   const adjusted: Game[][] = games.map((round, index) =>
     index === lastIndex
@@ -134,7 +134,7 @@ function foreBuchholz(playerId: string, games: Game[][]): number {
       : round,
   );
   let sum = 0;
-  for (const id of opponentIds(playerId, games)) {
+  for (const id of opponents(player, games)) {
     sum += score(id, adjusted);
   }
   return sum;
