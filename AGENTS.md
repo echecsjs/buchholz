@@ -85,7 +85,7 @@ pnpm lint && pnpm test && pnpm build
 - All seven functions share the same signature `(playerId, games, players?)` so
   they are interchangeable in tiebreak pipelines. Round is structural:
   `games[n]` = round n+1. The `Game` type has no `round` field.
-- A `Game` with `blackId: ''` (empty string) represents a **bye**. Byes are
+- A `Game` with `black: ''` (empty string) represents a **bye**. Byes are
   excluded from Buchholz calculations — the absent opponent contributes no
   score.
 - Cut variants sort opponents' scores and remove the extremes before summing.
