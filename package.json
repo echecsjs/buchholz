@@ -29,6 +29,30 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./average": {
+      "import": "./dist/average.js",
+      "types": "./dist/average.d.ts"
+    },
+    "./cut1": {
+      "import": "./dist/cut1.js",
+      "types": "./dist/cut1.d.ts"
+    },
+    "./cut2": {
+      "import": "./dist/cut2.js",
+      "types": "./dist/cut2.d.ts"
+    },
+    "./fore": {
+      "import": "./dist/fore.js",
+      "types": "./dist/fore.d.ts"
+    },
+    "./median1": {
+      "import": "./dist/median1.js",
+      "types": "./dist/median1.d.ts"
+    },
+    "./median2": {
+      "import": "./dist/median2.js",
+      "types": "./dist/median2.d.ts"
     }
   },
   "files": [
@@ -48,7 +72,6 @@
     "typescript"
   ],
   "license": "MIT",
-  "main": "dist/index.js",
   "name": "@echecs/buchholz",
   "publishConfig": {
     "access": "public"
@@ -72,6 +95,5 @@
   },
   "sideEffects": false,
   "type": "module",
-  "types": "dist/index.d.ts",
-  "version": "0.3.0"
+  "version": "1.0.0"
 }
