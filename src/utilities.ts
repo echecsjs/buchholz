@@ -1,7 +1,5 @@
 import type { Game, GameKind } from './types.js';
 
-const BYE_SENTINEL = '';
-
 interface Contribution {
   isVUR: boolean;
   value: number;
@@ -63,7 +61,7 @@ function gamesForPlayer(player: string, games: Game[][]): Game[] {
 
 function opponents(player: string, games: Game[][]): string[] {
   return gamesForPlayer(player, games)
-    .filter((g) => g.black !== BYE_SENTINEL)
+    .filter((g) => g.black !== g.white)
     .map((g) => (g.white === player ? g.black : g.white));
 }
 
@@ -112,7 +110,7 @@ function dummyScore(player: string, games: Game[][], game: Game): number {
   const pKind = playerGameKind(player, game);
   if (pKind === 'forfeit-win' || pKind === 'forfeit-loss') {
     const opponent = game.white === player ? game.black : game.white;
-    if (opponent === BYE_SENTINEL) {
+    if (game.black === game.white) {
       return Math.min(playerOwnScore, games.length * 0.5);
     }
     return Math.min(playerOwnScore, adjustedScore(opponent, games));
@@ -140,7 +138,7 @@ function contributions(player: string, games: Game[][]): Contribution[] {
           isVUR: isVUR(pKind),
           value: dummyScore(player, games, g),
         });
-      } else if (g.black !== BYE_SENTINEL && g.white !== BYE_SENTINEL) {
+      } else if (g.black !== g.white) {
         // OTB game → opponent's adjusted score (FIDE 16.3)
         const opponent = g.white === player ? g.black : g.white;
         result.push({
@@ -186,7 +184,6 @@ function applyCuts(items: Contribution[], count: number): Contribution[] {
 }
 
 export {
-  BYE_SENTINEL,
   adjustedScore,
   applyCuts,
   contributions,
