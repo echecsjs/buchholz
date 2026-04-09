@@ -4,6 +4,8 @@ Agent guidance for the `@echecs/buchholz` repository — a TypeScript library
 implementing the Buchholz tiebreak family following FIDE Tiebreak Regulations
 (section 8).
 
+**See also:** [`REFERENCES.md`](REFERENCES.md) | [`SPEC.md`](SPEC.md)
+
 See the root `AGENTS.md` for workspace-wide conventions.
 
 **Backlog:** tracked in
@@ -120,6 +122,16 @@ pnpm lint && pnpm test && pnpm build
   contributions before the globally-lowest value.
 - **No runtime dependencies** — keep it that way.
 - **ESM-only** — the package ships only ESM. Do not add a CJS build.
+
+---
+
+## Tiebreak Signature
+
+All tiebreak functions consumed by `@echecs/tournament` must conform to:
+
+```typescript
+(playerId: string, games: Game[], players: Map<string, Player>) => number;
+```
 
 ---
 
