@@ -9,7 +9,7 @@ implementing the Buchholz tiebreak family following FIDE Tiebreak Regulations
 See the root `AGENTS.md` for workspace-wide conventions.
 
 **Backlog:** tracked in
-[GitHub Issues](https://github.com/mormubis/buchholz/issues).
+[GitHub Issues](https://github.com/echecsjs/buchholz/issues).
 
 ---
 

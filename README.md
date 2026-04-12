@@ -1,7 +1,7 @@
 # Buchholz
 
 [![npm](https://img.shields.io/npm/v/@echecs/buchholz)](https://www.npmjs.com/package/@echecs/buchholz)
-[![Coverage](https://codecov.io/gh/mormubis/buchholz/branch/main/graph/badge.svg)](https://codecov.io/gh/mormubis/buchholz)
+[![Coverage](https://codecov.io/gh/echecsjs/buchholz/branch/main/graph/badge.svg)](https://codecov.io/gh/echecsjs/buchholz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Buchholz** is a TypeScript library implementing the Buchholz tiebreak family
@@ -166,4 +166,4 @@ consumers who build player registries alongside tiebreak calculations.
 ## Contributing
 
 Contributions are welcome. Please open an issue at
-[github.com/mormubis/buchholz/issues](https://github.com/mormubis/buchholz/issues).
+[github.com/echecsjs/buchholz/issues](https://github.com/echecsjs/buchholz/issues).

@@ -1,7 +1,7 @@
 {
   "author": "Adrian de la Rosa <adrian@delarosab.me>",
   "bugs": {
-    "url": "https://github.com/mormubis/buchholz/issues"
+    "url": "https://github.com/echecsjs/buchholz/issues"
   },
   "description": "Buchholz tiebreak system for chess tournaments following FIDE rules. Includes Buchholz, Cut-1, Cut-2, Median-1, Median-2, Average of Opponents' Buchholz, and Fore Buchholz. Zero dependencies.",
   "devDependencies": {
@@ -61,7 +61,7 @@
     "README.md",
     "CHANGELOG.md"
   ],
-  "homepage": "https://github.com/mormubis/buchholz#readme",
+  "homepage": "https://github.com/echecsjs/buchholz#readme",
   "keywords": [
     "buchholz",
     "chess",
@@ -81,7 +81,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mormubis/buchholz.git"
+    "url": "https://github.com/echecsjs/buchholz.git"
   },
   "scripts": {
     "build": "tsdown",
