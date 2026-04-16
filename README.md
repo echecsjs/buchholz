@@ -36,9 +36,9 @@ const score = buchholz('A', games);
 
 ## API
 
-All functions accept `(player: string, games: Game[][])` and return `number`.
-Round is determined by array position: `games[0]` = round 1, `games[1]` = round
-2, etc. The `Game` type has no `round` field.
+All functions accept `(player: string, games: Game[][], players?: Player[])` and
+return `number`. Round is determined by array position: `games[0]` = round 1,
+`games[1]` = round 2, etc. The `Game` type has no `round` field.
 
 The optional `kind?: GameKind` field on `Game` classifies unplayed rounds for
 FIDE article 16 compliance. Valid values: `'forfeit-loss'`, `'forfeit-win'`,
@@ -160,8 +160,11 @@ interface Player {
 }
 ```
 
-Minimal player shape. Not a parameter of any tiebreak function — provided for
-consumers who build player registries alongside tiebreak calculations.
+Minimal player shape. Passed as the optional third argument to all tiebreak
+functions. When provided, `players` supplies the full participant registry so
+that opponents who have no games recorded (e.g. late withdrawals or forfeited
+rounds with no matching `Game` entry) can still be resolved for score
+calculations. If omitted, only opponents found in `games` are considered.
 
 ## Contributing
 
