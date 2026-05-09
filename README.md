@@ -3,6 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@echecs/buchholz)](https://www.npmjs.com/package/@echecs/buchholz)
 [![Coverage](https://codecov.io/gh/echecsjs/buchholz/branch/main/graph/badge.svg)](https://codecov.io/gh/echecsjs/buchholz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Spec](https://img.shields.io/badge/Spec-FIDE-green.svg)](SPEC.md)
 
 **Buchholz** is a TypeScript library implementing the Buchholz tiebreak family
 for chess tournaments, following the
