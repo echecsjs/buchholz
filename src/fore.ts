@@ -1,16 +1,27 @@
 import { opponents, score } from './utilities.js';
 
-import type { Game } from './types.js';
+import type { CompletedRound, Player } from '@echecs/tournament';
 
-function foreBuchholz(player: string, games: Game[][]): number {
-  const lastIndex = games.length - 1;
-  const adjusted: Game[][] = games.map((round, index) =>
+function foreBuchholz(
+  player: string,
+  rounds: CompletedRound[],
+  _players: Player[],
+): number {
+  const lastIndex = rounds.length - 1;
+  const adjusted: CompletedRound[] = rounds.map((round, index) =>
     index === lastIndex
-      ? round.map((g) => ({ ...g, result: 0.5 as const }))
+      ? {
+          ...round,
+          games: round.games.map((g) => ({
+            black: g.black,
+            result: 'draw' as const,
+            white: g.white,
+          })),
+        }
       : round,
   );
   let sum = 0;
-  for (const id of opponents(player, games)) {
+  for (const id of opponents(player, rounds)) {
     sum += score(id, adjusted);
   }
   return sum;
@@ -18,4 +29,10 @@ function foreBuchholz(player: string, games: Game[][]): number {
 
 export { foreBuchholz, foreBuchholz as tiebreak };
 
-export type { Game, GameKind, Player, Result } from './types.js';
+export type {
+  Bye,
+  CompletedRound,
+  Game,
+  Pairing,
+  Player,
+} from '@echecs/tournament';

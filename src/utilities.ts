@@ -1,36 +1,61 @@
-import type { Game, GameKind } from './types.js';
+import type { Bye, CompletedRound, Game } from '@echecs/tournament';
 
 interface Contribution {
   isVUR: boolean;
   value: number;
 }
 
-const VUR_KINDS = new Set<GameKind>(['forfeit-loss', 'half-bye', 'zero-bye']);
+/** VUR bye kinds: requested byes and forfeit losses. */
+const VUR_BYE_KINDS = new Set<Bye['kind']>(['half', 'zero']);
 
-/**
- * Returns the game kind from a specific player's perspective.
- * For forfeits, the perspective matters: 'forfeit-win' from white's
- * perspective is 'forfeit-loss' from black's perspective.
- */
-function playerGameKind(player: string, game: Game): GameKind | undefined {
-  if (game.kind === undefined) {
-    return undefined;
+function scoreFor(player: string, game: Game): number {
+  if (game.result === 'draw') {
+    return 0.5;
   }
-  if (game.kind === 'forfeit-win') {
-    return game.white === player ? 'forfeit-win' : 'forfeit-loss';
+  if (game.result === 'none') {
+    return 0;
   }
-  if (game.kind === 'forfeit-loss') {
-    return game.white === player ? 'forfeit-loss' : 'forfeit-win';
-  }
-  return game.kind;
+  return (game.result === 'white' && game.white === player) ||
+    (game.result === 'black' && game.black === player)
+    ? 1
+    : 0;
 }
 
-function isVUR(kind?: GameKind): boolean {
-  return kind !== undefined && VUR_KINDS.has(kind);
+function gamesForPlayer(player: string, rounds: CompletedRound[]): Game[] {
+  return rounds
+    .flatMap((r) => r.games)
+    .filter((g) => g.white === player || g.black === player);
 }
 
-function isUnplayed(kind?: GameKind): boolean {
-  return kind !== undefined;
+function opponents(player: string, rounds: CompletedRound[]): string[] {
+  return gamesForPlayer(player, rounds).map((g) =>
+    g.white === player ? g.black : g.white,
+  );
+}
+
+/** Find the bye entry for a player in a round, if any. */
+function byeForPlayer(player: string, round: CompletedRound): Bye | undefined {
+  return round.byes.find((b) => b.player === player);
+}
+
+/** Is this bye a VUR (voluntary unplayed round)? */
+function isByeVUR(bye: Bye): boolean {
+  return VUR_BYE_KINDS.has(bye.kind);
+}
+
+/** Is a forfeit game a VUR from the given player's perspective? */
+function isForfeitVUR(player: string, game: Game): boolean {
+  if (game.forfeit === undefined) {
+    return false;
+  }
+  if (game.forfeit === 'both') {
+    return true;
+  }
+  // forfeit-loss is a VUR for the forfeiting player
+  return (
+    (game.forfeit === 'white' && game.white === player) ||
+    (game.forfeit === 'black' && game.black === player)
+  );
 }
 
 /**
@@ -39,39 +64,51 @@ function isUnplayed(kind?: GameKind): boolean {
  */
 function isTerminalBye(
   player: string,
-  games: Game[][],
+  rounds: CompletedRound[],
   roundIndex: number,
 ): boolean {
-  for (let index = roundIndex + 1; index < games.length; index++) {
-    for (const g of games[index] ?? []) {
-      if (g.white === player || g.black === player) {
-        const pKind = playerGameKind(player, g);
-        if (!isVUR(pKind)) {
-          return false;
-        }
+  for (const round of rounds.slice(roundIndex + 1)) {
+    // Check if player has a non-VUR bye
+    const bye = byeForPlayer(player, round);
+    if (bye !== undefined) {
+      if (!isByeVUR(bye)) {
+        return false;
+      }
+      continue;
+    }
+    // Check if player has a non-VUR game
+    for (const g of round.games) {
+      if (
+        (g.white === player || g.black === player) &&
+        !isForfeitVUR(player, g)
+      ) {
+        return false;
       }
     }
   }
   return true;
 }
 
-function gamesForPlayer(player: string, games: Game[][]): Game[] {
-  return games.flat().filter((g) => g.white === player || g.black === player);
-}
-
-function opponents(player: string, games: Game[][]): string[] {
-  return gamesForPlayer(player, games)
-    .filter((g) => g.black !== g.white)
-    .map((g) => (g.white === player ? g.black : g.white));
-}
-
 /**
- * Raw score — sum of awarded points, no FIDE 16 adjustments.
+ * Raw score — sum of awarded points from games, no FIDE 16 adjustments.
+ * Does not include bye points (those are in Player.points).
  */
-function score(player: string, games: Game[][]): number {
+function score(player: string, rounds: CompletedRound[]): number {
   let sum = 0;
-  for (const g of gamesForPlayer(player, games)) {
-    sum += g.white === player ? g.result : 1 - g.result;
+  for (const g of gamesForPlayer(player, rounds)) {
+    sum += scoreFor(player, g);
+  }
+  // Add bye points
+  for (const round of rounds) {
+    const bye = byeForPlayer(player, round);
+    if (bye !== undefined) {
+      if (bye.kind === 'full' || bye.kind === 'pairing') {
+        sum += 1;
+      } else if (bye.kind === 'half') {
+        sum += 0.5;
+      }
+      // zero-bye: 0 points
+    }
   }
   return sum;
 }
@@ -80,20 +117,28 @@ function score(player: string, games: Game[][]): number {
  * FIDE 16.3: Adjusted score for the purpose of calculating opponents'
  * tiebreaks. Terminal requested byes (16.2.5) are evaluated as draws.
  */
-function adjustedScore(player: string, games: Game[][]): number {
+function adjustedScore(player: string, rounds: CompletedRound[]): number {
   let sum = 0;
-  for (const [roundIndex, round] of games.entries()) {
-    for (const g of round) {
+  for (const [roundIndex, round] of rounds.entries()) {
+    // Check for bye in this round
+    const bye = byeForPlayer(player, round);
+    if (bye !== undefined) {
+      if (isByeVUR(bye) && isTerminalBye(player, rounds, roundIndex)) {
+        // 16.2.5 terminal bye -> draw
+        sum += 0.5;
+      } else if (bye.kind === 'full' || bye.kind === 'pairing') {
+        sum += 1;
+      } else if (bye.kind === 'half') {
+        sum += 0.5;
+      }
+      continue;
+    }
+    // Check games
+    for (const g of round.games) {
       if (g.white !== player && g.black !== player) {
         continue;
       }
-      const points = g.white === player ? g.result : 1 - g.result;
-      const pKind = playerGameKind(player, g);
-      sum +=
-        (pKind === 'half-bye' || pKind === 'zero-bye') &&
-        isTerminalBye(player, games, roundIndex)
-          ? 0.5
-          : points;
+      sum += scoreFor(player, g);
     }
   }
   return sum;
@@ -101,52 +146,68 @@ function adjustedScore(player: string, games: Game[][]): number {
 
 /**
  * FIDE 16.4: Dummy score for a participant's own unplayed round.
- * Dummy score = participant's score, capped at:
- * - 16.4.1: opponent's adjusted score (for forfeits)
- * - 16.4.2: 0.5 × total rounds (for other byes)
  */
-function dummyScore(player: string, games: Game[][], game: Game): number {
-  const playerOwnScore = score(player, games);
-  const pKind = playerGameKind(player, game);
-  if (pKind === 'forfeit-win' || pKind === 'forfeit-loss') {
-    const opponent = game.white === player ? game.black : game.white;
-    if (game.black === game.white) {
-      return Math.min(playerOwnScore, games.length * 0.5);
-    }
-    return Math.min(playerOwnScore, adjustedScore(opponent, games));
-  }
-  return Math.min(playerOwnScore, games.length * 0.5);
+function dummyScoreForBye(
+  player: string,
+  rounds: CompletedRound[],
+  _bye: Bye,
+): number {
+  const playerOwnScore = score(player, rounds);
+  // 16.4.2: byes — capped at 0.5 * totalRounds
+  return Math.min(playerOwnScore, rounds.length * 0.5);
+}
+
+function dummyScoreForForfeit(
+  player: string,
+  rounds: CompletedRound[],
+  game: Game,
+): number {
+  const playerOwnScore = score(player, rounds);
+  // 16.4.1: forfeits — capped at opponent's adjusted score
+  const opponent = game.white === player ? game.black : game.white;
+  return Math.min(playerOwnScore, adjustedScore(opponent, rounds));
 }
 
 /**
  * Collect Buchholz contributions for a player per FIDE 16.
  */
-function contributions(player: string, games: Game[][]): Contribution[] {
+function contributions(
+  player: string,
+  rounds: CompletedRound[],
+): Contribution[] {
   const result: Contribution[] = [];
 
-  for (const round of games) {
-    for (const g of round) {
+  for (const round of rounds) {
+    // Check if player has a bye this round
+    const bye = byeForPlayer(player, round);
+    if (bye !== undefined) {
+      result.push({
+        isVUR: isByeVUR(bye),
+        value: dummyScoreForBye(player, rounds, bye),
+      });
+      continue;
+    }
+
+    // Check games
+    for (const g of round.games) {
       if (g.white !== player && g.black !== player) {
         continue;
       }
 
-      const pKind = playerGameKind(player, g);
-
-      if (isUnplayed(pKind)) {
-        // FIDE 16.4: participant's own unplayed round → dummy opponent
-        result.push({
-          isVUR: isVUR(pKind),
-          value: dummyScore(player, games, g),
-        });
-      } else if (g.black !== g.white) {
-        // OTB game → opponent's adjusted score (FIDE 16.3)
+      if (g.forfeit === undefined) {
+        // OTB game — opponent's adjusted score (FIDE 16.3)
         const opponent = g.white === player ? g.black : g.white;
         result.push({
           isVUR: false,
-          value: adjustedScore(opponent, games),
+          value: adjustedScore(opponent, rounds),
+        });
+      } else {
+        // Forfeit game — use dummy score
+        result.push({
+          isVUR: isForfeitVUR(player, g),
+          value: dummyScoreForForfeit(player, rounds, g),
         });
       }
-      // Byes without kind (legacy sentinel byes) are skipped — same as before
     }
   }
 
@@ -154,13 +215,7 @@ function contributions(player: string, games: Game[][]): Contribution[] {
 }
 
 /**
- * FIDE 16.5 Cut-1 Exception: When cutting the least significant value
- * for a participant with VURs, cut the lowest VUR contribution first,
- * as long as it's not lower than the least significant value.
- *
- * Implementation: sort all contributions ascending. For each cut needed,
- * if there's a VUR contribution, cut it (it's always >= the minimum
- * since we're iterating from lowest). Otherwise cut the overall lowest.
+ * FIDE 16.5 Cut-1 Exception.
  */
 function applyCuts(items: Contribution[], count: number): Contribution[] {
   if (count <= 0 || items.length === 0) {
@@ -171,7 +226,6 @@ function applyCuts(items: Contribution[], count: number): Contribution[] {
   const result = [...sorted];
 
   for (let index = 0; index < count && result.length > 0; index++) {
-    // FIDE 16.5: prefer cutting VUR contributions
     const vurIndex = result.findIndex((c) => c.isVUR);
     if (vurIndex === -1) {
       result.shift();
@@ -186,14 +240,17 @@ function applyCuts(items: Contribution[], count: number): Contribution[] {
 export {
   adjustedScore,
   applyCuts,
+  byeForPlayer,
   contributions,
-  dummyScore,
+  dummyScoreForBye,
+  dummyScoreForForfeit,
   gamesForPlayer,
-  isUnplayed,
-  isVUR,
+  isByeVUR,
+  isForfeitVUR,
+  isTerminalBye,
   opponents,
-  playerGameKind,
   score,
+  scoreFor,
 };
 
 export type { Contribution };
