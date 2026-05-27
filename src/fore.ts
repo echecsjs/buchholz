@@ -1,12 +1,8 @@
 import { opponents, score } from './utilities.js';
 
-import type { CompletedRound, Player } from '@echecs/tournament';
+import type { CompletedRound, Tiebreak } from '@echecs/tournament';
 
-function foreBuchholz(
-  player: string,
-  rounds: CompletedRound[],
-  _players: Player[],
-): number {
+const foreBuchholz: Tiebreak = (player, rounds, _players) => {
   const lastIndex = rounds.length - 1;
   const adjusted: CompletedRound[] = rounds.map((round, index) =>
     index === lastIndex
@@ -25,7 +21,7 @@ function foreBuchholz(
     sum += score(id, adjusted);
   }
   return sum;
-}
+};
 
 export { foreBuchholz, foreBuchholz as tiebreak };
 
