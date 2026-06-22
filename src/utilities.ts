@@ -67,7 +67,8 @@ function isTerminalBye(
   rounds: CompletedRound[],
   roundIndex: number,
 ): boolean {
-  for (const round of rounds.slice(roundIndex + 1)) {
+  const subsequentRounds = rounds.slice(roundIndex + 1);
+  for (const round of subsequentRounds) {
     // Check if player has a non-VUR bye
     const bye = byeForPlayer(player, round);
     if (bye !== undefined) {
@@ -134,10 +135,10 @@ function adjustedScore(player: string, rounds: CompletedRound[]): number {
       continue;
     }
     // Check games
-    for (const g of round.games) {
-      if (g.white !== player && g.black !== player) {
-        continue;
-      }
+    const g = round.games.find(
+      (game) => game.white === player || game.black === player,
+    );
+    if (g !== undefined) {
       sum += scoreFor(player, g);
     }
   }
@@ -189,11 +190,10 @@ function contributions(
     }
 
     // Check games
-    for (const g of round.games) {
-      if (g.white !== player && g.black !== player) {
-        continue;
-      }
-
+    const g = round.games.find(
+      (game) => game.white === player || game.black === player,
+    );
+    if (g !== undefined) {
       if (g.forfeit === undefined) {
         // OTB game — opponent's adjusted score (FIDE 16.3)
         const opponent = g.white === player ? g.black : g.white;
