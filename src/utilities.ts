@@ -5,7 +5,9 @@ interface Contribution {
   value: number;
 }
 
-/** VUR bye kinds: requested byes and forfeit losses. */
+/**
+VUR bye kinds: requested byes and forfeit losses.
+*/
 const VUR_BYE_KINDS = new Set<Bye['kind']>(['half', 'zero']);
 
 function scoreFor(player: string, game: Game): number {
@@ -43,28 +45,30 @@ function otbOpponents(player: string, rounds: CompletedRound[]): string[] {
     .map((g) => (g.white === player ? g.black : g.white));
 }
 
-/** Find the bye entry for a player in a round, if any. */
+/**
+Find the bye entry for a player in a round, if any.
+*/
 function byeForPlayer(player: string, round: CompletedRound): Bye | undefined {
   return round.byes.find((b) => b.player === player);
 }
 
-/** Is this bye a VUR (voluntary unplayed round)? */
+/**
+Is this bye a VUR (voluntary unplayed round)?
+*/
 function isByeVUR(bye: Bye): boolean {
   return VUR_BYE_KINDS.has(bye.kind);
 }
 
-/** Is a forfeit game a VUR from the given player's perspective? */
+/**
+Is a forfeit game a VUR from the given player's perspective?
+*/
 function isForfeitVUR(player: string, game: Game): boolean {
-  if (game.forfeit === undefined) {
-    return false;
-  }
-  if (game.forfeit === 'both') {
-    return true;
-  }
   // forfeit-loss is a VUR for the forfeiting player
   return (
-    (game.forfeit === 'white' && game.white === player) ||
-    (game.forfeit === 'black' && game.black === player)
+    game.forfeit !== undefined &&
+    (game.forfeit === 'both' ||
+      (game.forfeit === 'white' && game.white === player) ||
+      (game.forfeit === 'black' && game.black === player))
   );
 }
 
